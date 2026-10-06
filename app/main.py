@@ -1,8 +1,4 @@
 import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from fastapi import FastAPI
 from app.api.routes.certificates import router as certificates_router
 from app.api.routes.jobs import router as jobs_router
