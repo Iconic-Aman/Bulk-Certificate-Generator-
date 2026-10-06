@@ -60,7 +60,7 @@ graph TB
 
 ---
 
-## 2. Data Flow — Generating 		Certificates
+## 2. Data Flow — Generating 				Certificates
 
 ```mermaid
 sequenceDiagram
