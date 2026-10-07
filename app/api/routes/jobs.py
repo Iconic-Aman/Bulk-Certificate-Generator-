@@ -1,6 +1,5 @@
 import os
-from fastapi import APIRouter, BackgroundTasks, Depends, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, BackgroundTasks, Depends
 from app.api.deps import get_db, verify_api_key
 from app.schemas.job import JobCreate
 from app.services.job_processor import process_job
@@ -26,4 +25,7 @@ def get_job(job_id: str, db=Depends(get_db)):
 @router.get("/jobs/{job_id}/download")
 def download_job_zip(job_id: str, db=Depends(get_db)):
     download_url = get_job_zip(db, job_id)
-    return RedirectResponse(url=download_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    return {
+        "job_id": job_id,
+        "download_url": download_url,
+    }

@@ -1,7 +1,10 @@
+import logging
 import os
 import sys
 from dotenv import load_dotenv
 from fastapi import FastAPI
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)

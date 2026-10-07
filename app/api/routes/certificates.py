@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import RedirectResponse
 from app.api.deps import get_db, verify_api_key
 from app.models import Certificate
 from app.services.storage import get_presigned_url
@@ -19,4 +18,8 @@ def download_certificate(cert_id: str, db=Depends(get_db)):
         )
 
     download_url = get_presigned_url(cert.file_path, filename=f"cert_{cert.id}.pdf")
-    return RedirectResponse(url=download_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    return {
+        "certificate_id": cert.id,
+        "recipient_name": cert.recipient_name,
+        "download_url": download_url,
+    }

@@ -65,10 +65,19 @@ def get_job_status(db, job_id):
     ).fetchall())
     processed = sum(v for k, v in counts.items() if k != "pending")
     total = job.total_count or 1
+    failed_certs = db.query(Certificate).filter(
+        Certificate.job_id == job_id,
+        Certificate.status.in_(("failed", "invalid")),
+    ).all()
+    failures = [
+        {"certificate_id": c.id, "position": c.position, "status": c.status, "error": c.error_message}
+        for c in failed_certs
+    ]
+
     return {"job_id": job.id, "title": job.title, "status": job.status,
             "progress": {"total": job.total_count, "processed": processed,
                          "percent": round(processed / total * 100)},
-            "counts": counts,
+            "counts": counts, "failures": failures,
             "created_at": job.created_at, "started_at": job.started_at, "finished_at": job.finished_at}
 
 
