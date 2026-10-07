@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from app.api.deps import get_db
+from app.api.deps import get_db, verify_api_key
 from app.models import Certificate
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 
 @router.get("/certificates/{cert_id}/download")

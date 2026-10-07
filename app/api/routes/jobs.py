@@ -1,12 +1,12 @@
 import os
 from fastapi import APIRouter, BackgroundTasks, Depends
-from fastapi.responses import FileResponse, StreamingResponse
-from app.api.deps import get_db
+from fastapi.responses import StreamingResponse
+from app.api.deps import get_db, verify_api_key
 from app.schemas.job import JobCreate
 from app.services.job_processor import process_job
 from app.services.job_service import get_job_status, get_job_zip, save_job_and_rows
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 
 @router.post("/jobs", status_code=202)
