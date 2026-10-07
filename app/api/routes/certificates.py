@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from app.api.deps import get_db, verify_api_key
 from app.models import Certificate
+from app.services.storage import get_presigned_url
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -16,4 +17,6 @@ def download_certificate(cert_id: str, db=Depends(get_db)):
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Certificate cannot be downloaded: status is {cert.status}",
         )
-    return FileResponse(cert.file_path, filename=f"cert_{cert.id}.pdf", media_type="application/pdf")
+
+    download_url = get_presigned_url(cert.file_path, filename=f"cert_{cert.id}.pdf")
+    return RedirectResponse(url=download_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)

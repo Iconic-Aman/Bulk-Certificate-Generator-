@@ -1,6 +1,6 @@
 import os
-from fastapi import APIRouter, BackgroundTasks, Depends
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi.responses import RedirectResponse
 from app.api.deps import get_db, verify_api_key
 from app.schemas.job import JobCreate
 from app.services.job_processor import process_job
@@ -25,6 +25,5 @@ def get_job(job_id: str, db=Depends(get_db)):
 
 @router.get("/jobs/{job_id}/download")
 def download_job_zip(job_id: str, db=Depends(get_db)):
-    buf = get_job_zip(db, job_id)
-    return StreamingResponse(buf, media_type="application/zip",
-                             headers={"Content-Disposition": f"attachment; filename=job_{job_id}.zip"})
+    download_url = get_job_zip(db, job_id)
+    return RedirectResponse(url=download_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)

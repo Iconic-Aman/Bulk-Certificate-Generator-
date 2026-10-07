@@ -74,6 +74,8 @@ def get_job_status(db, job_id):
 
 def get_job_zip(db, job_id):
     import io, zipfile
+    from app.services.storage import get_bytes, get_presigned_url, upload_bytes
+
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -82,6 +84,9 @@ def get_job_zip(db, job_id):
     with zipfile.ZipFile(buf, "w") as zf:
         for c in certs:
             if c.file_path:
-                zf.write(c.file_path, arcname=f"{c.recipient_name}_{c.id}.pdf")
+                pdf_data = get_bytes(c.file_path)
+                zf.writestr(f"{c.recipient_name}_{c.id}.pdf", pdf_data)
     buf.seek(0)
-    return buf
+    zip_key = f"zips/{job_id}.zip"
+    upload_bytes(zip_key, buf.getvalue(), content_type="application/zip")
+    return get_presigned_url(zip_key, filename=f"job_{job_id}.zip")
