@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, BackgroundTasks, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from app.api.deps import get_db
 from app.schemas.job import JobCreate
 from app.services.job_processor import process_job
@@ -25,5 +25,6 @@ def get_job(job_id: str, db=Depends(get_db)):
 
 @router.get("/jobs/{job_id}/download")
 def download_job_zip(job_id: str, db=Depends(get_db)):
-    zip_path = get_job_zip(db, job_id)
-    return FileResponse(zip_path, filename=f"job_{job_id}.zip", media_type="application/zip")
+    buf = get_job_zip(db, job_id)
+    return StreamingResponse(buf, media_type="application/zip",
+                             headers={"Content-Disposition": f"attachment; filename=job_{job_id}.zip"})

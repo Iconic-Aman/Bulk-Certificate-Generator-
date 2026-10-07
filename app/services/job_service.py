@@ -1,20 +1,87 @@
+import re
 import uuid
+from fastapi import HTTPException
+from sqlalchemy import func
+from app.models import Certificate, Job
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MAX_RECIPIENTS = 1000
+
+
+def _validate_recipient(name, email, seen):
+    name = name.strip()
+    email = email.strip().lower()
+    if not name or len(name) > 100:
+        return name, email, "recipient_name: must be 1–100 characters"
+    if not EMAIL_RE.match(email):
+        return name, email, "recipient_email: not a valid email address"
+    if email in seen:
+        return name, email, "recipient_email: duplicate email in job"
+    return name, email, None
 
 
 def save_job_and_rows(db, payload):
-    return {
-        "job_id": str(uuid.uuid4()),
-        "status": "pending",
-        "total": len(payload.recipients),
-        "accepted": len(payload.recipients),
-        "rejected": 0,
-        "rejected_items": [],
-    }
+    if len(payload.recipients) > MAX_RECIPIENTS:
+        raise HTTPException(status_code=413, detail=f"Max {MAX_RECIPIENTS} recipients allowed")
+
+    job = Job(
+        id=str(uuid.uuid4()),
+        title=payload.title,
+        issued_by=payload.issued_by,
+        issue_date=payload.issue_date,
+        status="pending",
+        total_count=len(payload.recipients),
+    )
+    db.add(job)
+    db.flush()
+
+    seen, accepted, rejected_items = set(), 0, []
+    for i, r in enumerate(payload.recipients):
+        name, email, err = _validate_recipient(r.name, r.email, seen)
+        if err:
+            rejected_items.append({"position": i, "error": err})
+            db.add(Certificate(id=str(uuid.uuid4()), job_id=job.id, position=i,
+                               recipient_name=name or r.name, recipient_email=email or r.email,
+                               status="invalid", error_message=err))
+        else:
+            seen.add(email)
+            accepted += 1
+            db.add(Certificate(id=str(uuid.uuid4()), job_id=job.id, position=i,
+                               recipient_name=name, recipient_email=email,
+                               certificate_number=f"CERT-{job.issue_date.year}-{uuid.uuid4().hex[:6].upper()}",
+                               status="pending"))
+    db.commit()
+    return {"job_id": job.id, "status": "pending", "total": len(payload.recipients),
+            "accepted": accepted, "rejected": len(rejected_items), "rejected_items": rejected_items}
 
 
 def get_job_status(db, job_id):
-    return {"job_id": job_id, "status": "pending"}
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    counts = dict(db.execute(
+        db.query(Certificate.status, func.count(Certificate.id))
+        .filter(Certificate.job_id == job_id).group_by(Certificate.status).statement
+    ).fetchall())
+    processed = sum(v for k, v in counts.items() if k != "pending")
+    total = job.total_count or 1
+    return {"job_id": job.id, "title": job.title, "status": job.status,
+            "progress": {"total": job.total_count, "processed": processed,
+                         "percent": round(processed / total * 100)},
+            "counts": counts,
+            "created_at": job.created_at, "started_at": job.started_at, "finished_at": job.finished_at}
 
 
 def get_job_zip(db, job_id):
-    return ""
+    import io, zipfile
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    certs = db.query(Certificate).filter_by(job_id=job_id, status="success").all()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for c in certs:
+            if c.file_path:
+                zf.write(c.file_path, arcname=f"{c.recipient_name}_{c.id}.pdf")
+    buf.seek(0)
+    return buf
