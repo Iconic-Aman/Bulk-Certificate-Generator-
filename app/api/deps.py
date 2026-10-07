@@ -1,2 +1,1 @@
-def get_db():
-    yield None
+from app.database import get_db  # noqa: F401
