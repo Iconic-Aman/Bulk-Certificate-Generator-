@@ -18,7 +18,7 @@ def process_job(job_id):
         certs = db.query(Certificate).filter_by(job_id=job_id, status="pending").all()
         for cert in certs:
             try:
-                cert.file_path = generate_pdf(cert)
+                cert.file_path = generate_pdf(cert, job)
                 cert.status = "success"
             except Exception as e:
                 cert.status = "failed"
