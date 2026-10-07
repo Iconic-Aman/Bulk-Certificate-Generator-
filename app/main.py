@@ -5,9 +5,8 @@ from fastapi import FastAPI
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
-for path in (current_dir, parent_dir):
-    if path not in sys.path:
-        sys.path.insert(0, path)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
 load_dotenv(os.path.join(parent_dir, ".env"))
 load_dotenv(os.path.join(current_dir, ".env"))
