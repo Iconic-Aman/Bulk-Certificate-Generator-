@@ -1,6 +1,6 @@
 from datetime import date
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RecipientIn(BaseModel):
@@ -9,7 +9,7 @@ class RecipientIn(BaseModel):
 
 
 class JobCreate(BaseModel):
-    title: str
-    issued_by: str
+    title: str = Field(..., min_length=1)
+    issued_by: str = Field(..., min_length=1)
     issue_date: date
-    recipients: List[RecipientIn]
+    recipients: List[RecipientIn] = Field(..., min_length=1)
