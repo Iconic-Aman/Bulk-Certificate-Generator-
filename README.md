@@ -5,6 +5,7 @@ Asynchronous REST API to generate and deliver PDF certificates in bulk using Fas
 ---
 
 ## 1. Features
+
 - **Asynchronous Execution:** Non-blocking bulk submissions return `202 Accepted` immediately.
 - **Fault-Tolerant Processing:** Per-certificate isolation; a failure in one certificate never halts the remaining batch.
 - **Cloud Storage:** Certificates and ZIP bundles are stored in Cloudflare R2 and served via presigned URLs.
@@ -36,6 +37,7 @@ R2_BUCKET=certificates
 ## 3. Setup & Installation
 
 ### Local Setup (using `uv`)
+
 ```bash
 git clone <repo-url>
 cd Bulk-Certificate-Generator-
@@ -44,6 +46,7 @@ uv sync
 ```
 
 ### Database Migration
+
 Execute `schema.sql` in your PostgreSQL / Supabase SQL editor to create the `jobs` and `certificates` tables and indexes.
 
 ---
@@ -51,13 +54,16 @@ Execute `schema.sql` in your PostgreSQL / Supabase SQL editor to create the `job
 ## 4. Running the Application
 
 ### Local Development
+
 ```bash
 cd app
 uv run uvicorn main:app --reload --port 8000
 ```
+
 Swagger UI will be available at: `http://localhost:8000/api/docs`
 
 ### Render Deployment
+
 - **Build Command:** `cd app && pip install .`
 - **Start Command:** `cd app && uvicorn main:app --host 0.0.0.0 --port $PORT`
 - **Environment:** Add all `.env` variables in Render Dashboard.
@@ -73,6 +79,7 @@ uv run pytest tests -v
 ```
 
 Test coverage includes:
+
 - `test_create_job.py`: Job creation, 202 status, DB rows.
 - `test_validation.py`: 422 schemas, 413 recipient limit, malformed and duplicate emails.
 - `test_generator.py`: PDF binary structure, unicode names, and auto-scaling long text.
@@ -87,6 +94,7 @@ Test coverage includes:
 All protected routes require the `X-API-Key` header.
 
 ### 1. Submit Generation Job
+
 ```bash
 curl -X POST "http://localhost:8000/api/jobs" \
   -H "Content-Type: application/json" \
@@ -101,7 +109,9 @@ curl -X POST "http://localhost:8000/api/jobs" \
     ]
   }'
 ```
+
 **Response (202 Accepted):**
+
 ```json
 {
   "job_id": "c1f7b7f1-...",
@@ -115,11 +125,14 @@ curl -X POST "http://localhost:8000/api/jobs" \
 ```
 
 ### 2. Check Job Status & Progress
+
 ```bash
 curl -X GET "http://localhost:8000/api/jobs/{job_id}" \
   -H "X-API-Key: your-secret-api-key"
 ```
+
 **Response (200 OK):**
+
 ```json
 {
   "job_id": "c1f7b7f1-...",
@@ -131,11 +144,14 @@ curl -X GET "http://localhost:8000/api/jobs/{job_id}" \
 ```
 
 ### 3. Retrieve Single Certificate
+
 ```bash
 curl -X GET "http://localhost:8000/api/certificates/{cert_id}/download" \
   -H "X-API-Key: your-secret-api-key"
 ```
+
 **Response (200 OK):** Returns a JSON object containing a 1-hour presigned Cloudflare R2 download URL:
+
 ```json
 {
   "certificate_id": "{cert_id}",
@@ -145,10 +161,12 @@ curl -X GET "http://localhost:8000/api/certificates/{cert_id}/download" \
 ```
 
 ### 4. Retrieve All Certificates as ZIP
+
 ```bash
 curl -X GET "http://localhost:8000/api/jobs/{job_id}/download" \
   -H "X-API-Key: your-secret-api-key"
 ```
+
 **Response (200 OK):** Returns a presigned Cloudflare R2 download link for the bundled archive (`zips/{job_id}.zip`).
 
 ---
