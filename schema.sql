@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS certificates (
     position INT NOT NULL,
     recipient_name TEXT NOT NULL,
     recipient_email TEXT NOT NULL,
+    title TEXT NOT NULL,
     certificate_number TEXT UNIQUE,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (
         status IN ('pending', 'processing', 'success', 'failed', 'invalid')
@@ -36,3 +37,4 @@ CREATE TABLE IF NOT EXISTS certificates (
 -- Indexes
 CREATE INDEX IF NOT EXISTS ix_certificates_job_status ON certificates (job_id, status);
 CREATE INDEX IF NOT EXISTS ix_certificates_job_id ON certificates (job_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cert_email_title ON certificates (recipient_email, title) WHERE status != 'invalid';

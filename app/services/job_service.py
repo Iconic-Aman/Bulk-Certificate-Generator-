@@ -45,6 +45,7 @@ def save_job_and_rows(db, payload):
             rejected_items.append({"position": i, "error": err})
             db.add(Certificate(id=str(uuid.uuid4()), job_id=job.id, position=i,
                                recipient_name=name or r.name, recipient_email=email or r.email,
+                               title=job.title,
                                issue_date=cert_date,
                                status="invalid", error_message=err))
         else:
@@ -52,6 +53,7 @@ def save_job_and_rows(db, payload):
             accepted += 1
             db.add(Certificate(id=str(uuid.uuid4()), job_id=job.id, position=i,
                                recipient_name=name, recipient_email=email,
+                               title=job.title,
                                issue_date=cert_date,
                                certificate_number=f"CERT-{cert_date.year}-{uuid.uuid4().hex[:6].upper()}",
                                status="pending"))

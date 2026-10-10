@@ -215,6 +215,7 @@ certificates (
   position INT,               -- index in the original request (for error reporting)
   recipient_name TEXT,
   recipient_email TEXT,
+  title TEXT,                 -- course title copied for uniqueness check
   certificate_number TEXT UNIQUE,   -- e.g. CERT-2026-8F3A1C
   status TEXT,                -- pending | processing | success | failed | invalid
   issue_date DATE,            -- date printed on certificate
@@ -225,6 +226,7 @@ certificates (
 
 -- Indexes
 CREATE INDEX ix_certificates_job_status ON certificates (job_id, status);
+CREATE UNIQUE INDEX uq_cert_email_title ON certificates (recipient_email, title) WHERE status != 'invalid';
 ```
 
 **Why counts are not stored on `jobs`:** success / failed / pending counts are computed with one `GROUP BY status` query when the status endpoint is called. Stored counters can drift if a worker crashes between two updates. A query cannot drift.

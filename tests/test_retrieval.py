@@ -10,6 +10,7 @@ def test_download_success_certificate(client, db):
         position=0,
         recipient_name="Sam",
         recipient_email="sam@example.com",
+        title=job.title,
         status="success",
         issue_date=date(2026, 10, 7),
         file_path="certificates/job-1/cert-1.pdf",
@@ -38,6 +39,7 @@ def test_download_unsuccessful_certificate_returns_409(client, db):
         position=0,
         recipient_name="Failed Student",
         recipient_email="fail@example.com",
+        title=job.title,
         status="failed",
         issue_date=date(2026, 10, 7),
     )
@@ -64,6 +66,7 @@ def test_download_job_zip(client, db):
         position=0,
         recipient_name="Sam",
         recipient_email="sam@example.com",
+        title=job.title,
         status="success",
         issue_date=date(2026, 10, 7),
         file_path="certificates/job-zip/cert-zip-1.pdf",

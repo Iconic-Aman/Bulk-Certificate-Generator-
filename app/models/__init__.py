@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from sqlalchemy import ForeignKey, Integer, Text, Date, DateTime
+from sqlalchemy import ForeignKey, Integer, Text, Date, DateTime, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -28,6 +28,7 @@ class Certificate(Base):
     position: Mapped[int] = mapped_column(Integer)
     recipient_name: Mapped[str] = mapped_column(Text)
     recipient_email: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     certificate_number: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     status: Mapped[str] = mapped_column(Text, default="pending")
     issue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -37,3 +38,14 @@ class Certificate(Base):
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     job: Mapped["Job"] = relationship("Job", back_populates="certificates")
+
+    __table_args__ = (
+        Index(
+            "uq_cert_email_title",
+            "recipient_email",
+            "title",
+            unique=True,
+            postgresql_where=text("status != 'invalid'"),
+            sqlite_where=text("status != 'invalid'"),
+        ),
+    )
