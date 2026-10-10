@@ -8,15 +8,21 @@ R2_SECRET_KEY = os.getenv("R2_SECRET_KEY")
 R2_BUCKET = os.getenv("R2_BUCKET", "certificates")
 
 
+_s3_client = None
+
+
 def get_s3_client():
-    return boto3.client(
-        "s3",
-        endpoint_url=R2_ENDPOINT,
-        aws_access_key_id=R2_ACCESS_KEY,
-        aws_secret_access_key=R2_SECRET_KEY,
-        config=Config(signature_version="s3v4"),
-        region_name="auto",
-    )
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client(
+            "s3",
+            endpoint_url=R2_ENDPOINT,
+            aws_access_key_id=R2_ACCESS_KEY,
+            aws_secret_access_key=R2_SECRET_KEY,
+            config=Config(signature_version="s3v4"),
+            region_name="auto",
+        )
+    return _s3_client
 
 
 def upload_bytes(key: str, data: bytes, content_type: str = "application/pdf") -> str:

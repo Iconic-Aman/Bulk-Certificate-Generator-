@@ -1,19 +1,20 @@
 # Bulk Certificate Generator
 
-Asynchronous REST API to generate and deliver PDF certificates in bulk using FastAPI, ReportLab, Supabase PostgreSQL, and Cloudflare R2 storage.
+A backend service that creates PDF certificates in bulk, saves them in cloud storage, and lets you download them one-by-one or all together in a ZIP file.
 
 ---
 
-## 1. Features & Architecture
-- **Asynchronous Execution:** Non-blocking bulk submissions return `202 Accepted` immediately.
-- **Fault-Tolerant Processing:** Per-certificate isolation; a failure in one certificate never halts the remaining batch.
-- **Cloud Storage:** Certificates and ZIP bundles are stored in Cloudflare R2 and served via presigned URLs.
-- **Two-Tier Validation:** Request-level validation rejects malformed requests, while recipient-level validation isolates bad records.
-- **Dynamic Live Progress:** Job counts are evaluated dynamically with `GROUP BY` to prevent counter drift.
+## 1. How It Works
+- **Fast and Non-Blocking:** When you upload names, the server gives you a Job ID right away and creates PDFs in the background.
+- **Safe from Crashes:** If one person has bad data, only their certificate fails. Everyone else still gets theirs.
+- **Cloud Storage:** PDFs are saved to Cloudflare R2 and given out via temporary download links.
+- **Live Progress:** Check your Job ID anytime to see how many certificates are done, pending, or failed.
 
 ---
 
-## 2. Environment Variables (`.env`)
+## 2. Setup & Run
+
+### Environment Setup (`.env`)
 ```env
 DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
 API_PREFIX=/api
@@ -26,50 +27,57 @@ R2_SECRET_KEY=<R2_SECRET_ACCESS_KEY>
 R2_BUCKET=certificates
 ```
 
----
-
-## 3. Setup, Run & Tests
+### Run Locally
 ```bash
-# Setup & run locally
 cd app && uv sync
-uv run uvicorn main:app --reload --port 8000   # Docs: http://localhost:8000/api/docs
+uv run uvicorn main:app --reload --port 8000   # Swagger UI: http://localhost:8000/api/docs
 
-# Run full test suite (17 tests covering validation, generation, failure isolation, retrieval, idempotency)
+# Run all automated tests
 uv run pytest tests -v
 ```
-**Render Deployment:** Build: `cd app && pip install .` | Start: `cd app && uvicorn main:app --host 0.0.0.0 --port $PORT`
 
 ---
 
-## 4. API Usage (Header: `X-API-Key: <key>`)
+## 3. How to Use the API (Header: `X-API-Key: <key>`)
 
-### 1. Submit Generation Job (JSON or File Upload)
-- **JSON Body:** `POST /api/jobs`
+### 1. Create Certificates (JSON or File)
+- **Send JSON (`POST /api/jobs`):**
 ```bash
 curl -X POST "http://localhost:8000/api/jobs" -H "Content-Type: application/json" -H "X-API-Key: key" -d '{
-  "title": "Cloud Computing", "issued_by": "Acme",
+  "title": "Web Development", "issued_by": "Acme School",
   "recipients": [{"name": "Alice", "email": "alice@example.com", "issue_date": "2026-10-09"}]
 }'
 ```
-- **File Upload:** `POST /api/jobs/upload` (Upload `.json` file containing recipients list via multipart form).
+- **Upload File (`POST /api/jobs/upload`):** Upload a `.json` file with names and emails directly.
 
-### 2. Check Job Status & Progress
-```bash
-curl -X GET "http://localhost:8000/api/jobs/{job_id}" -H "X-API-Key: key"
-# Returns 200 OK with progress percent, counts (success, failed, invalid), and detailed failures list
-```
+### 2. Check Job Status (`GET /api/jobs/{job_id}`)
+See progress percent, counts of finished certificates, and details on any failed rows.
 
-### 3. Retrieve Certificates (Presigned R2 Links)
-- **Single PDF:** `GET /api/certificates/{cert_id}/download` → Returns 1-hour presigned direct download URL.
-- **ZIP Bundle:** `GET /api/jobs/{job_id}/download` → Generates & returns presigned download URL for `zips/{job_id}.zip`.
+### 3. Download Certificates
+- **Single Certificate:** `GET /api/certificates/{cert_id}/download` (returns direct PDF link).
+- **All in one ZIP:** `GET /api/jobs/{job_id}/download` (packs all successful PDFs into one ZIP file).
 
 ---
 
-## 5. Edge Cases Covered
-- **Rapid Double-Clicks / Concurrent Submissions:** Partial unique index `uq_cert_email_title` on DB catches race conditions with `IntegrityError` → returns `409 Conflict`.
-- **Re-Submitting Batches (Idempotency):** System queries existing `(title, recipient_email)` pairs, skips already-issued recipients with a message, and generates jobs only for new users.
-- **Partial Batch Failures:** Per-item `try/except` loop commits progress individually so one bad recipient never aborts the remaining batch.
-- **Malformed & Duplicate Data:** Bad emails, missing names, and intra-batch duplicates are marked `invalid` without blocking valid recipients. Batches >1000 items return `413`.
-- **Unready / Failed Downloads:** Requesting ungenerated or failed certificates returns `409 Conflict` (never corrupt files). Non-existent IDs return `404`.
-- **Extremely Long Text & Special Characters:** Dynamic font auto-scaling in ReportLab shrinks text size to fit printable certificate boundaries without truncation.
-- **Unauthorized Access:** Missing or invalid `X-API-Key` returns `401` / `403` across all endpoints.
+## 4. Edge Cases Handled
+- **Clicking Submit Twice:** The database catches double submissions immediately and stops duplicate work.
+- **Uploading Same People Again:** Skips people who already received a certificate for that course and only creates new ones.
+- **Bad or Missing Data:** Wrong email format or empty names are cleanly flagged without stopping other valid certificates.
+- **Downloading Before Ready:** Blocks download requests until files are ready, so you never get broken files.
+- **Super Long Names:** Shrinks text size automatically so long names fit cleanly on the certificate.
+- **Wrong or Missing Password:** Blocks unauthenticated requests with `401` or `403`.
+
+---
+
+## 5. Further Improvements
+- **Login with Google/GitHub (OAuth):** Allow users to sign in with their own accounts instead of sharing one fixed API key.
+- **Upload Excel Files (`.xlsx`, `.csv`):** Let users upload spreadsheet files directly without having to convert them to JSON first.
+
+---
+
+## 6. Performance & Speed (100 Certificates Test)
+
+| Step | Time Taken | What was done |
+| :--- | :--- | :--- |
+| **First Try (Baseline)** | 157.0s (~1.5s per cert) | Initial code: made new storage connections every time and committed to database row by row. |
+| **Reuse Storage Connection** | *Pending run* | Reuses one cloud storage connection instead of opening a new one for every single PDF. |

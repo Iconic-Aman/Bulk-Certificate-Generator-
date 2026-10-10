@@ -21,19 +21,32 @@ def process_job(job_id):
         db.commit()
 
         certs = db.query(Certificate).filter_by(job_id=job_id, status="pending").all()
+        import time
+
         logger.info("Job %s: %d pending certificates to generate", job_id, len(certs))
+        t_total = time.perf_counter()
+        t_pdf = t_upload = t_db = 0.0
 
         for i, cert in enumerate(certs, 1):
             logger.info("Job %s [%d/%d]: Generating for '%s' (%s)", job_id, i, len(certs), cert.recipient_name, cert.id)
             try:
+                t0 = time.perf_counter()
                 cert.file_path = generate_pdf(cert, job)
+                t_pdf += time.perf_counter() - t0
                 cert.status = "success"
                 logger.info("Job %s [%d/%d]: SUCCESS -> %s", job_id, i, len(certs), cert.file_path)
             except Exception as e:
                 cert.status = "failed"
                 cert.error_message = str(e)
                 logger.error("Job %s [%d/%d]: FAILED -> %s", job_id, i, len(certs), e, exc_info=True)
+
+            t0 = time.perf_counter()
             db.commit()
+            t_db += time.perf_counter() - t0
+
+        elapsed = time.perf_counter() - t_total
+        print(f"Total time taken: {elapsed:.3f}s | PDF gen & R2: {t_pdf:.3f}s | DB commits: {t_db:.3f}s")
+        logger.info("Job %s: Total: %.3fs (PDF+Upload: %.3fs, DB commits: %.3fs)", job_id, elapsed, t_pdf, t_db)
 
         all_certs = db.query(Certificate).filter_by(job_id=job_id).all()
         success = sum(1 for c in all_certs if c.status == "success")

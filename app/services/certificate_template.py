@@ -1,17 +1,3 @@
-"""
-Certificate template (ReportLab, free, pure Python).
-
-Usage:
-    from certificate_template import generate_certificate
-
-    # Filled certificate
-    generate_certificate("out.pdf", name="Rahul Sharma",
-                         course="Python Backend Development",
-                         date="07 October 2026", certificate_id="CERT-0001")
-
-    # Blank certificate (name line left empty so it can be written by hand)
-    generate_certificate("blank.pdf")
-"""
 import math
 import re
 from reportlab.lib.pagesizes import A4, landscape
