@@ -55,3 +55,42 @@ def test_recipient_validation_mixed_and_duplicates(client):
     assert "recipient_email" in errors[1]
     assert "recipient_name" in errors[2]
     assert "duplicate email" in errors[3]
+
+
+def test_idempotent_duplicate_submission_skips_existing(client):
+    # 1. First submission: 2 new students
+    payload1 = {
+        "title": "SQL Workshop",
+        "issued_by": "Acme",
+        "recipients": [
+            {"name": "Asha", "email": "asha@example.com"},
+            {"name": "Rohan", "email": "rohan@example.com"},
+        ],
+    }
+    res1 = client.post("/api/jobs", json=payload1)
+    assert res1.status_code == 202
+    assert res1.json()["accepted"] == 2
+
+    # 2. Re-submit same file: all skipped, no new job
+    res2 = client.post("/api/jobs", json=payload1)
+    assert res2.status_code == 202
+    data2 = res2.json()
+    assert data2["job_id"] is None
+    assert data2["status"] == "skipped"
+    assert set(data2["skipped"]) == {"asha@example.com", "rohan@example.com"}
+
+    # 3. Submit mixed (1 existing Asha + 1 new Karan): creates job for Karan only
+    payload3 = {
+        "title": "SQL Workshop",
+        "issued_by": "Acme",
+        "recipients": [
+            {"name": "Asha", "email": "asha@example.com"},
+            {"name": "Karan", "email": "karan@example.com"},
+        ],
+    }
+    res3 = client.post("/api/jobs", json=payload3)
+    assert res3.status_code == 202
+    data3 = res3.json()
+    assert data3["job_id"] is not None
+    assert data3["accepted"] == 1
+    assert data3["skipped"] == ["asha@example.com"]

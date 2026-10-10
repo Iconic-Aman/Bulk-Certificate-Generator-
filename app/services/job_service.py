@@ -21,24 +21,52 @@ def _validate_recipient(name, email, seen):
 
 
 from datetime import date
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 
 def save_job_and_rows(db, payload):
     if len(payload.recipients) > MAX_RECIPIENTS:
         raise HTTPException(status_code=413, detail=f"Max {MAX_RECIPIENTS} recipients allowed")
 
+    incoming_emails = [r.email.strip().lower() for r in payload.recipients if r.email]
+    already = set(
+        db.scalars(
+            select(Certificate.recipient_email).where(
+                Certificate.title == payload.title,
+                Certificate.recipient_email.in_(incoming_emails),
+                Certificate.status != "invalid",
+            )
+        ).all()
+    ) if incoming_emails else set()
+
+    new_recipients = [r for r in payload.recipients if r.email.strip().lower() not in already]
+    skipped = [r.email.strip().lower() for r in payload.recipients if r.email.strip().lower() in already]
+
+    if not new_recipients:
+        return {
+            "job_id": None,
+            "status": "skipped",
+            "message": "All recipients already have certificates for this title",
+            "total": len(payload.recipients),
+            "accepted": 0,
+            "rejected": 0,
+            "skipped": skipped,
+            "rejected_items": [],
+        }
+
     job = Job(
         id=str(uuid.uuid4()),
         title=payload.title,
         issued_by=payload.issued_by,
         status="pending",
-        total_count=len(payload.recipients),
+        total_count=len(new_recipients),
     )
     db.add(job)
     db.flush()
 
     seen, accepted, rejected_items = set(), 0, []
-    for i, r in enumerate(payload.recipients):
+    for i, r in enumerate(new_recipients):
         name, email, err = _validate_recipient(r.name, r.email, seen)
         cert_date = getattr(r, "issue_date", None) or date.today()
         if err:
@@ -57,9 +85,15 @@ def save_job_and_rows(db, payload):
                                issue_date=cert_date,
                                certificate_number=f"CERT-{cert_date.year}-{uuid.uuid4().hex[:6].upper()}",
                                status="pending"))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Duplicate certificate submission in progress")
+
     return {"job_id": job.id, "status": "pending", "total": len(payload.recipients),
-            "accepted": accepted, "rejected": len(rejected_items), "rejected_items": rejected_items}
+            "accepted": accepted, "rejected": len(rejected_items), "skipped": skipped,
+            "rejected_items": rejected_items}
 
 
 def get_job_status(db, job_id):

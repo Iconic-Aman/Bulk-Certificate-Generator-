@@ -13,9 +13,10 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 @router.post("/jobs", status_code=202)
 def create_job(payload: JobCreate, background_tasks: BackgroundTasks, db=Depends(get_db)):
     response = save_job_and_rows(db, payload)
-    background_tasks.add_task(process_job, response["job_id"])
-    status_url_base = os.getenv("JOB_STATUS_URL_BASE", "")
-    response["status_url"] = f"{status_url_base}/{response['job_id']}"
+    if response.get("job_id"):
+        background_tasks.add_task(process_job, response["job_id"])
+        status_url_base = os.getenv("JOB_STATUS_URL_BASE", "")
+        response["status_url"] = f"{status_url_base}/{response['job_id']}"
     return response
 
 
