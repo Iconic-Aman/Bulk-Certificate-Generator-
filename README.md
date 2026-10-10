@@ -41,21 +41,36 @@ uv run pytest tests -v
 ## 3. How to Use the API (Header: `X-API-Key: <key>`)
 
 ### 1. Create Certificates (JSON or File)
-- **Send JSON (`POST /api/jobs`):**
+> **Sample Test File:** [Download sample recipients.json](https://github.com/Iconic-Aman/Bulk-Certificate-Generator-/releases/download/v1.0/recipients.json) (or use [`people.json`](people.json) directly in this repo).
+
+- **Upload File (`POST /api/jobs/upload`):**
 ```bash
-curl -X POST "http://localhost:8000/api/jobs" -H "Content-Type: application/json" -H "X-API-Key: key" -d '{
-  "title": "Web Development", "issued_by": "Acme School",
-  "recipients": [{"name": "Alice", "email": "alice@example.com", "issue_date": "2026-10-09"}]
-}'
+curl -X POST "http://localhost:8000/api/jobs/upload" \
+  -H "X-API-Key: your-secret-api-key" \
+  -F "file=@people.json" \
+  -F "title=Web Development Bootcamp" \
+  -F "issued_by=Acme Academy"
 ```
-- **Upload File (`POST /api/jobs/upload`):** Upload a `.json` file with names and emails directly.
+- **Send JSON Body (`POST /api/jobs`):**
+```bash
+curl -X POST "http://localhost:8000/api/jobs" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-api-key" \
+  -d '{
+    "title": "Web Development", "issued_by": "Acme School",
+    "recipients": [{"name": "Alice", "email": "alice@example.com", "issue_date": "2026-10-09"}]
+  }'
+```
 
 ### 2. Check Job Status (`GET /api/jobs/{job_id}`)
-See progress percent, counts of finished certificates, and details on any failed rows.
+```bash
+curl -X GET "http://localhost:8000/api/jobs/{job_id}" -H "X-API-Key: your-secret-api-key"
+```
+Returns progress percent, counts (success, failed, invalid), and error details for any failed rows.
 
 ### 3. Download Certificates
-- **Single Certificate:** `GET /api/certificates/{cert_id}/download` (returns direct PDF link).
-- **All in one ZIP:** `GET /api/jobs/{job_id}/download` (packs all successful PDFs into one ZIP file).
+- **Single Certificate:** `GET /api/certificates/{cert_id}/download` (returns direct presigned PDF link).
+- **All in one ZIP:** `GET /api/jobs/{job_id}/download` (returns presigned link for full job ZIP bundle).
 
 ---
 
