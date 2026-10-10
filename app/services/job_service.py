@@ -122,7 +122,7 @@ def get_job_status(db, job_id):
         db.query(Certificate.status, func.count(Certificate.id))
         .filter(Certificate.job_id == job_id).group_by(Certificate.status).statement
     ).fetchall())
-    processed = sum(v for k, v in counts.items() if k != "pending")
+    processed = sum(counts.get(k, 0) for k in ("success", "failed", "invalid"))
     total = job.total_count or 1
     failed_certs = db.query(Certificate).filter(
         Certificate.job_id == job_id,
@@ -141,19 +141,24 @@ def get_job_status(db, job_id):
 
 
 def get_job_zip(db, job_id):
-    import io, zipfile
+    import io, re, zipfile
+    from concurrent.futures import ThreadPoolExecutor
     from app.services.storage import get_bytes, get_presigned_url, upload_bytes
 
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    certs = db.query(Certificate).filter_by(job_id=job_id, status="success").all()
+
+    certs = [c for c in db.query(Certificate).filter_by(job_id=job_id, status="success").all() if c.file_path]
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        pdfs = list(pool.map(get_bytes, [c.file_path for c in certs]))
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        for c in certs:
-            if c.file_path:
-                pdf_data = get_bytes(c.file_path)
-                zf.writestr(f"{c.recipient_name}_{c.id}.pdf", pdf_data)
+        for c, data in zip(certs, pdfs):
+            safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", c.recipient_name)
+            zf.writestr(f"{safe_name}_{c.id}.pdf", data)
+
     buf.seek(0)
     zip_key = f"zips/{job_id}.zip"
     upload_bytes(zip_key, buf.getvalue(), content_type="application/zip")

@@ -79,5 +79,5 @@ See progress percent, counts of finished certificates, and details on any failed
 
 | Step | Time Taken | What was done |
 | :--- | :--- | :--- |
-| **First Try (Baseline)** | 157.0s (~1.5s per cert) | Initial code: made new storage connections every time and committed to database row by row. |
-| **Reuse Storage Connection** | *Pending run* | Reuses one cloud storage connection instead of opening a new one for every single PDF. |
+| **First Try (Baseline)** | 157.0s (~1.57s per cert) | Initial sequential generation: recreated cloud storage connections and made separate database commits for every single row. |
+| **Thread Pool + Batch Commits** | **38.07s (~0.38s per cert)** | Added 10-thread worker pool for parallel PDF generation & R2 upload, cached S3 connection, and batched DB commits every 20 rows (4.1x faster). |

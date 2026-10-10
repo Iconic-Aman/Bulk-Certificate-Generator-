@@ -21,32 +21,56 @@ def process_job(job_id):
         db.commit()
 
         certs = db.query(Certificate).filter_by(job_id=job_id, status="pending").all()
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from app.services.certificate_generator import generate_and_upload
         import time
 
         logger.info("Job %s: %d pending certificates to generate", job_id, len(certs))
         t_total = time.perf_counter()
-        t_pdf = t_upload = t_db = 0.0
 
-        for i, cert in enumerate(certs, 1):
-            logger.info("Job %s [%d/%d]: Generating for '%s' (%s)", job_id, i, len(certs), cert.recipient_name, cert.id)
-            try:
-                t0 = time.perf_counter()
-                cert.file_path = generate_pdf(cert, job)
-                t_pdf += time.perf_counter() - t0
-                cert.status = "success"
-                logger.info("Job %s [%d/%d]: SUCCESS -> %s", job_id, i, len(certs), cert.file_path)
-            except Exception as e:
-                cert.status = "failed"
-                cert.error_message = str(e)
-                logger.error("Job %s [%d/%d]: FAILED -> %s", job_id, i, len(certs), e, exc_info=True)
+        by_id = {c.id: c for c in certs}
+        cert_args = [
+            (c.id, c.recipient_name, c.certificate_number, c.issue_date)
+            for c in certs
+        ]
 
-            t0 = time.perf_counter()
-            db.commit()
-            t_db += time.perf_counter() - t0
+        class _SimpleCert:
+            __slots__ = ("id", "recipient_name", "certificate_number", "issue_date")
+            def __init__(self, id, name, num, dt):
+                self.id, self.recipient_name, self.certificate_number, self.issue_date = id, name, num, dt
 
+        class _SimpleJob:
+            __slots__ = ("id", "title", "issued_by")
+            def __init__(self, id, title, issued_by):
+                self.id, self.title, self.issued_by = id, title, issued_by
+
+        simple_job = _SimpleJob(job.id, job.title, job.issued_by)
+
+        def task(item):
+            s_cert = _SimpleCert(*item)
+            return generate_pdf(s_cert, simple_job)
+
+        done = 0
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            futures = {pool.submit(task, item): item[0] for item in cert_args}
+            for fut in as_completed(futures):
+                cert = by_id[futures[fut]]
+                try:
+                    cert.file_path = fut.result()
+                    cert.status = "success"
+                except Exception as e:
+                    cert.status = "failed"
+                    cert.error_message = str(e)[:500]
+                    logger.error("Job %s: cert %s FAILED -> %s", job_id, cert.id, e)
+
+                done += 1
+                if done % 20 == 0:
+                    db.commit()
+
+        db.commit()
         elapsed = time.perf_counter() - t_total
-        print(f"Total time taken: {elapsed:.3f}s | PDF gen & R2: {t_pdf:.3f}s | DB commits: {t_db:.3f}s")
-        logger.info("Job %s: Total: %.3fs (PDF+Upload: %.3fs, DB commits: %.3fs)", job_id, elapsed, t_pdf, t_db)
+        print(f"Total time taken for {len(certs)} certs: {elapsed:.3f}s")
+        logger.info("Job %s: Total time for %d certs: %.3fs", job_id, len(certs), elapsed)
 
         all_certs = db.query(Certificate).filter_by(job_id=job_id).all()
         success = sum(1 for c in all_certs if c.status == "success")
