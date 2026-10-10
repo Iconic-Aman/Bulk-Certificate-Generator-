@@ -1,3 +1,4 @@
+from datetime import date
 import os
 import tempfile
 from app.services.certificate_template import generate_certificate
@@ -9,11 +10,13 @@ def generate_pdf(cert, job) -> str:
         tmp_path = tmp.name
 
     try:
+        cert_date = cert.issue_date or date.today()
+        date_str = cert_date.strftime("%d %B %Y") if hasattr(cert_date, "strftime") else str(cert_date)
         generate_certificate(
             path=tmp_path,
             name=cert.recipient_name,
             course=job.title,
-            date=job.issue_date.strftime("%d %B %Y"),
+            date=date_str,
             certificate_id=cert.certificate_number,
             issuer=job.issued_by,
         )

@@ -20,6 +20,9 @@ def _validate_recipient(name, email, seen):
     return name, email, None
 
 
+from datetime import date
+
+
 def save_job_and_rows(db, payload):
     if len(payload.recipients) > MAX_RECIPIENTS:
         raise HTTPException(status_code=413, detail=f"Max {MAX_RECIPIENTS} recipients allowed")
@@ -28,7 +31,6 @@ def save_job_and_rows(db, payload):
         id=str(uuid.uuid4()),
         title=payload.title,
         issued_by=payload.issued_by,
-        issue_date=payload.issue_date,
         status="pending",
         total_count=len(payload.recipients),
     )
@@ -38,17 +40,20 @@ def save_job_and_rows(db, payload):
     seen, accepted, rejected_items = set(), 0, []
     for i, r in enumerate(payload.recipients):
         name, email, err = _validate_recipient(r.name, r.email, seen)
+        cert_date = getattr(r, "issue_date", None) or date.today()
         if err:
             rejected_items.append({"position": i, "error": err})
             db.add(Certificate(id=str(uuid.uuid4()), job_id=job.id, position=i,
                                recipient_name=name or r.name, recipient_email=email or r.email,
+                               issue_date=cert_date,
                                status="invalid", error_message=err))
         else:
             seen.add(email)
             accepted += 1
             db.add(Certificate(id=str(uuid.uuid4()), job_id=job.id, position=i,
                                recipient_name=name, recipient_email=email,
-                               certificate_number=f"CERT-{job.issue_date.year}-{uuid.uuid4().hex[:6].upper()}",
+                               issue_date=cert_date,
+                               certificate_number=f"CERT-{cert_date.year}-{uuid.uuid4().hex[:6].upper()}",
                                status="pending"))
     db.commit()
     return {"job_id": job.id, "status": "pending", "total": len(payload.recipients),

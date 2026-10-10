@@ -7,20 +7,17 @@ def test_unknown_job_returns_404(client):
 
 
 def test_job_status_completed(client, monkeypatch):
-    # Process job synchronously
     payload = {
         "title": "Machine Learning",
         "issued_by": "DeepTech",
-        "issue_date": "2026-10-07",
         "recipients": [
-            {"name": "Alice", "email": "alice@example.com"},
-            {"name": "Bob", "email": "bob@example.com"},
+            {"name": "Alice", "email": "alice@example.com", "issue_date": "2026-10-07"},
+            {"name": "Bob", "email": "bob@example.com", "issue_date": "2026-10-07"},
         ],
     }
     resp = client.post("/api/jobs", json=payload)
     job_id = resp.json()["job_id"]
 
-    # Run background processor explicitly with mock
     monkeypatch.setattr("app.database.SessionLocal", lambda: client.app.dependency_overrides[list(client.app.dependency_overrides.keys())[0]]())
     process_job(job_id)
 
@@ -36,9 +33,8 @@ def test_job_status_completed_with_errors(client):
     payload = {
         "title": "Data Science",
         "issued_by": "Academy",
-        "issue_date": "2026-10-07",
         "recipients": [
-            {"name": "Valid Student", "email": "valid@example.com"},
+            {"name": "Valid Student", "email": "valid@example.com", "issue_date": "2026-10-07"},
             {"name": "", "email": "bad@example.com"},  # invalid
         ],
     }

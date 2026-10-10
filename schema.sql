@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     issued_by TEXT NOT NULL,
-    issue_date DATE NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (
         status IN ('pending', 'processing', 'completed', 'completed_with_errors', 'failed')
     ),
@@ -27,6 +26,7 @@ CREATE TABLE IF NOT EXISTS certificates (
     status TEXT NOT NULL DEFAULT 'pending' CHECK (
         status IN ('pending', 'processing', 'success', 'failed', 'invalid')
     ),
+    issue_date DATE,
     file_path TEXT,
     error_message TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

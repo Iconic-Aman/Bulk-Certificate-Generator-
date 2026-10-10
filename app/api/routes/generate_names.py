@@ -1,5 +1,6 @@
 # import json
 # import random
+# from datetime import date, timedelta
 
 # first_names = [
 #     "Aarav", "Aditi", "Arjun", "Ananya",
@@ -48,6 +49,7 @@
 # people = []
 # used_names = set()
 # used_emails = set()
+# today = date.today()
 
 # for first in first_names:
 #     for last in last_names:
@@ -63,11 +65,16 @@
 
 #         if email in used_emails:
 #             continue
-
+#         days_ago = random.randint(0, 6)
+#         issue_date = (
+#             today - timedelta(days=days_ago)
+#         ).isoformat()
+        
 #         people.append({
 #             "id": len(people) + 1,
 #             "name": full_name,
-#             "email": email
+#             "email": email,
+#             "issue_date": issue_date
 #         })
 
 #         used_names.add(full_name)
@@ -89,17 +96,22 @@
 # print("File saved as people.json")
 
 import json
-from datetime import date
+import random
+from datetime import date, timedelta
 
 # Read the existing JSON file
 with open("people.json", "r", encoding="utf-8") as file:
     users = json.load(file)
 
+# Generate a random issue date within the last 7 days
+days_ago = random.randint(0, 6)
+issue_date = (date.today() - timedelta(days=days_ago)).isoformat()
+
 # Transform all users into the required structure
 result = {
     "title": "string",
     "issued_by": "string",
-    "issue_date": date.today().isoformat(),
+    "issue_date": issue_date,
     "recipients": [
         {
             "name": user["name"],
@@ -114,3 +126,4 @@ with open("converted.json", "w", encoding="utf-8") as file:
     json.dump(result, file, indent=2, ensure_ascii=False)
 
 print("Conversion completed! Saved to converted.json")
+print(f"Issue date: {issue_date}")

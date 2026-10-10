@@ -1,7 +1,7 @@
 def test_missing_required_field_returns_422(client):
     payload = {
         "title": "Python Bootcamp",
-        # missing issued_by and issue_date
+        # missing issued_by
         "recipients": [{"name": "Aman", "email": "aman@example.com"}],
     }
     response = client.post("/api/jobs", json=payload)
@@ -12,7 +12,6 @@ def test_empty_recipients_returns_422(client):
     payload = {
         "title": "Python Bootcamp",
         "issued_by": "Acme",
-        "issue_date": "2026-10-07",
         "recipients": [],
     }
     response = client.post("/api/jobs", json=payload)
@@ -23,7 +22,6 @@ def test_over_limit_recipients_returns_413(client):
     payload = {
         "title": "Python Bootcamp",
         "issued_by": "Acme",
-        "issue_date": "2026-10-07",
         "recipients": [
             {"name": f"User {i}", "email": f"user{i}@example.com"}
             for i in range(1001)
@@ -37,12 +35,11 @@ def test_recipient_validation_mixed_and_duplicates(client):
     payload = {
         "title": "Python Bootcamp",
         "issued_by": "Acme",
-        "issue_date": "2026-10-07",
         "recipients": [
             {"name": "Valid One", "email": "valid1@example.com"},
             {"name": "Bad Email", "email": "not-an-email"},
             {"name": "", "email": "noname@example.com"},
-            {"name": "Duplicate", "email": "valid1@example.com"},  # duplicate
+            {"name": "Duplicate", "email": "valid1@example.com"},
         ],
     }
     response = client.post("/api/jobs", json=payload)
