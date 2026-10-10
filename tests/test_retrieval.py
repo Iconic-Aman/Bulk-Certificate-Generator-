@@ -3,7 +3,7 @@ from app.models import Certificate, Job
 
 
 def test_download_success_certificate(client, db):
-    job = Job(id="job-1", title="Python", issued_by="Acme", issue_date=date(2026, 10, 7))
+    job = Job(id="job-1", title="Python", issued_by="Acme")
     cert = Certificate(
         id="cert-1",
         job_id="job-1",
@@ -11,6 +11,7 @@ def test_download_success_certificate(client, db):
         recipient_name="Sam",
         recipient_email="sam@example.com",
         status="success",
+        issue_date=date(2026, 10, 7),
         file_path="certificates/job-1/cert-1.pdf",
     )
     db.add(job)
@@ -30,7 +31,7 @@ def test_download_unknown_certificate_returns_404(client):
 
 
 def test_download_unsuccessful_certificate_returns_409(client, db):
-    job = Job(id="job-2", title="Python", issued_by="Acme", issue_date=date(2026, 10, 7))
+    job = Job(id="job-2", title="Python", issued_by="Acme")
     cert = Certificate(
         id="cert-failed",
         job_id="job-2",
@@ -38,6 +39,7 @@ def test_download_unsuccessful_certificate_returns_409(client, db):
         recipient_name="Failed Student",
         recipient_email="fail@example.com",
         status="failed",
+        issue_date=date(2026, 10, 7),
     )
     db.add(job)
     db.add(cert)
@@ -55,7 +57,7 @@ def test_download_without_auth_returns_401_or_403(client):
 
 
 def test_download_job_zip(client, db):
-    job = Job(id="job-zip", title="Python", issued_by="Acme", issue_date=date(2026, 10, 7))
+    job = Job(id="job-zip", title="Python", issued_by="Acme")
     cert = Certificate(
         id="cert-zip-1",
         job_id="job-zip",
@@ -63,6 +65,7 @@ def test_download_job_zip(client, db):
         recipient_name="Sam",
         recipient_email="sam@example.com",
         status="success",
+        issue_date=date(2026, 10, 7),
         file_path="certificates/job-zip/cert-zip-1.pdf",
     )
     db.add(job)

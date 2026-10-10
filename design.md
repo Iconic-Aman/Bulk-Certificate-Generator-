@@ -203,7 +203,6 @@ jobs (
   id UUID PK,
   title TEXT,                 -- e.g. "Python Bootcamp 2026"
   issued_by TEXT,             -- organization name printed on certificate
-  issue_date DATE,            -- date printed on certificate
   status TEXT,                -- pending | processing | completed | completed_with_errors | failed
   total_count INT,            -- number of recipients in the request
   created_at, started_at, finished_at
@@ -218,6 +217,7 @@ certificates (
   recipient_email TEXT,
   certificate_number TEXT UNIQUE,   -- e.g. CERT-2026-8F3A1C
   status TEXT,                -- pending | processing | success | failed | invalid
+  issue_date DATE,            -- date printed on certificate
   file_path TEXT NULL,        -- set only on success
   error_message TEXT NULL,    -- set on failed / invalid
   created_at, generated_at
@@ -292,11 +292,10 @@ Request:
 {
   "title": "Python Bootcamp 2026",
   "issued_by": "Acme Academy",
-  "issue_date": "2026-10-01",
   "recipients": [
-    { "name": "Asha Verma", "email": "asha@example.com" },
-    { "name": "Rohan Das",  "email": "not-an-email" },
-    { "name": "",           "email": "empty@example.com" }
+    { "name": "Asha Verma", "email": "asha@example.com", "issue_date": "2026-10-01" },
+    { "name": "Rohan Das",  "email": "not-an-email",     "issue_date": "2026-10-01" },
+    { "name": "",           "email": "empty@example.com", "issue_date": "2026-10-01" }
   ]
 }
 ```

@@ -15,7 +15,6 @@ def test_individual_certificate_failure_isolation(client, db, monkeypatch):
     payload = {
         "title": "Cloud Architecture",
         "issued_by": "Cloud Academy",
-        "issue_date": "2026-10-07",
         "recipients": [
             {"name": "Good Student", "email": "good@example.com"},
             {"name": "Crash Student", "email": "crash@example.com"},

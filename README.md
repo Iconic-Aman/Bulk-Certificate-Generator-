@@ -102,10 +102,9 @@ curl -X POST "http://localhost:8000/api/jobs" \
   -d '{
     "title": "Cloud Computing Specialization",
     "issued_by": "Acme Academy",
-    "issue_date": "2026-10-09",
     "recipients": [
-      {"name": "Alice Smith", "email": "alice@example.com"},
-      {"name": "Bob Jones", "email": "bob@example.com"}
+      {"name": "Alice Smith", "email": "alice@example.com", "issue_date": "2026-10-09"},
+      {"name": "Bob Jones", "email": "bob@example.com", "issue_date": "2026-10-10"}
     ]
   }'
 ```
