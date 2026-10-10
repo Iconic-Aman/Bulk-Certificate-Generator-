@@ -320,6 +320,11 @@ Response `202 Accepted`:
 }
 ```
 
+![Upload Job 202 Response](docs/artifacts/upload-job.png)
+
+*Idempotency response when all recipients already have certificates:*
+![All Recipients Skipped Response](docs/artifacts/all-skipped.png)
+
 ### GET `/jobs/{job_id}`
 
 ```json
@@ -338,7 +343,15 @@ Response `202 Accepted`:
 }
 ```
 
+![Job Status & Progress Response](docs/artifacts/progress.png)
+
 `processed = success + failed + invalid`. `percent = processed / total * 100`.
+
+### GET `/jobs/{job_id}/download`
+
+Returns presigned Cloudflare R2 download URL packaging all certificates into a single `.zip` file:
+
+![Download Job ZIP Response](docs/artifacts/download-zip.png)
 
 ### GET `/jobs/{job_id}/certificates`
 

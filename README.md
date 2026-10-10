@@ -2,6 +2,8 @@
 
 A backend service that creates PDF certificates in bulk, saves them in cloud storage, and lets you download them one-by-one or all together in a ZIP file.
 
+![API Swagger Docs](docs/artifacts/api-image.png)
+
 ---
 
 ## 1. How It Works
