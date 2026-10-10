@@ -52,8 +52,14 @@ async def upload_job_json(
     return create_job(payload, background_tasks, db)
 
 
+import logging
+
+logger = logging.getLogger("jobs")
+
+
 @router.get("/jobs/{job_id}")
 def get_job(job_id: str, db=Depends(get_db)):
+    logger.info("GET /jobs/%s requested", job_id)
     return get_job_status(db, job_id)
 
 

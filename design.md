@@ -280,6 +280,7 @@ Base path: `/api/v1`
 | Method | Path                                 | Purpose                               | Success |
 | ------ | ------------------------------------ | ------------------------------------- | ------- |
 | POST   | `/jobs`                            | Submit bulk request                   | `202` |
+| POST   | `/jobs/upload`                     | Submit bulk request via file upload   | `202` |
 | GET    | `/jobs/{job_id}`                   | Status + progress + counts            | `200` |
 | GET    | `/jobs/{job_id}/certificates`      | List certificates (filter + paginate) | `200` |
 | GET    | `/jobs/{job_id}/download`          | ZIP of all successful PDFs            | `200` |
@@ -590,22 +591,7 @@ Setup in `conftest.py`: SQLite in-memory DB, `TestClient` with `get_db` overridd
 
 ---
 
-## 12. Likely Interview Changes (be ready)
-
-| They might ask                                    | Where you change it                                                                                                                          |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| "Make it survive restarts"                        | Wrap`process_job` as a Celery task, call `.delay(job_id)`. Add Redis to compose                                                          |
-| "Add retries for failed ones"                     | New endpoint`POST /jobs/{id}/retry` → set `failed` rows back to `pending`, re-enqueue. Works because processor only takes `pending` |
-| "Add a new field on the certificate" (e.g. grade) | Add to`RecipientIn`, model column + migration, one line in `_render`                                                                     |
-| "Send certificate by email"                       | New step after success in the loop, or a separate task                                                                                       |
-| "Store files in S3"                               | New`S3Storage(StorageBackend)`, change one dependency                                                                                      |
-| "Support 100k recipients"                         | Chunk the insert, process in batches with multiple workers, stream the ZIP                                                                   |
-| "Prevent duplicate submissions"                   | `Idempotency-Key` header stored on `jobs` with a unique index                                                                            |
-| "Add auth"                                        | API key header dependency on the router                                                                                                      |
-
----
-
-## 13. Out of Scope (on purpose)
+## 12. Out of Scope (on purpose)
 
 - Template editor or multiple designs (brief says one fixed template)
 - User accounts and login

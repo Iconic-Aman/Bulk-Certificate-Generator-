@@ -96,9 +96,27 @@ def save_job_and_rows(db, payload):
             "rejected_items": rejected_items}
 
 
+import logging
+
+logger = logging.getLogger("jobs")
+
+
 def get_job_status(db, job_id):
-    job = db.get(Job, job_id)
+    logger.info("Fetching status for job_id: %s", job_id)
+    try:
+        uuid.UUID(str(job_id))
+    except (ValueError, AttributeError):
+        logger.warning("Invalid UUID format for job_id: %s", job_id)
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    try:
+        job = db.get(Job, job_id)
+    except Exception as e:
+        logger.error("DB error fetching job %s: %s", job_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Database query error")
+
     if not job:
+        logger.info("Job not found in db: %s", job_id)
         raise HTTPException(status_code=404, detail="Job not found")
     counts = dict(db.execute(
         db.query(Certificate.status, func.count(Certificate.id))

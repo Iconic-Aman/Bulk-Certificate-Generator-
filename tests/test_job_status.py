@@ -6,6 +6,12 @@ def test_unknown_job_returns_404(client):
     assert response.status_code == 404
 
 
+def test_invalid_uuid_returns_404(client):
+    response = client.get("/api/jobs/not-a-valid-uuid")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Job not found"
+
+
 def test_job_status_completed(client, monkeypatch):
     payload = {
         "title": "Machine Learning",
